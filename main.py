@@ -54,13 +54,13 @@ def verdict():
     dsp = dspText.get("1.0", "end")
     msh = trainAnswer.get("1.0", "end")
     if dsp == msh:
-        resultLabel.config(text="Верно")
+        resultLabel.config(text="Результат: Верно")
     else:
-        resultLabel.config(text="Не верно. Повторите сообщение машинисту")
+        resultLabel.config(text="Результат: Не верно. Повторите сообщение машинисту")
 
 
 root.title("Траскрибатор")
-root.geometry('550x400')
+root.geometry('530x350')
 root.resizable(False, False)
 
 dspLabel = ttk.Label(text="ДСП (вопрос)")
