@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter.messagebox import showerror, showwarning, showinfo
 import whisper
 from PIL import Image
+import threading
 
 
 class Application(CTk.CTk):
@@ -42,8 +43,9 @@ class Application(CTk.CTk):
                                           font=("Bold", 16), command=self.choose_file)
         self.findFile_btn.grid(row=1, column=0, padx=(50, 50), pady=(50, 10), ipadx=10)
 
+        self.thr1 = threading.Thread(target=self.startTranscribe)
         self.startTr_btn = CTk.CTkButton(master=self.menu_frame,
-                                         text="Запуск", font=("Bold", 16), command=self.startTranscribe)
+                                         text="Запуск", font=("Bold", 16), command=self.thr1.start)
         self.startTr_btn.grid(row=1, column=1, padx=(50, 50), pady=(50, 10), ipadx=10)
 
         self.clear_btn = CTk.CTkButton(master=self.menu_frame, text="Очистить поля",
@@ -65,6 +67,8 @@ class Application(CTk.CTk):
         self.label_loading = tk.Label(master=self.menu_frame, foreground="#2d2d2d", bg="#2d2d2d", borderwidth=0)
         self.label_loading.place(x=285, y=70)
 
+        self.update_frame(1)
+
     def update_frame(self, frame_num):
         gif_path = "SVKl.gif"
         gif = Image.open(gif_path)
@@ -73,7 +77,6 @@ class Application(CTk.CTk):
         self.label_loading.configure(image=photo)
         self.label_loading.image = photo
         self.after(20, self.update_frame, (frame_num + 1) % num_frames)
-
 
     def choose_file(self):
         global dsp_file_path
@@ -87,46 +90,45 @@ class Application(CTk.CTk):
         name = os.path.split(msh_file_path)[-1]
         self.msh_file_path_lbl.configure(text=name)
 
-    def transcribe(self):
-        if not (dsp_file_path and msh_file_path):
-            showwarning("Предупреждение", "Пожалуйста, выберите файлы для транскрибации.")
-            return
-        try:
-
-            model = whisper.load_model("base")
-            dsp_audio = whisper.load_audio(dsp_file_path)
-            dsp_result = model.transcribe(dsp_audio)
-
-            dsp_result["text"] = dsp_result["text"].split()
-            dsp = ""
-            for words in dsp_result["text"]:
-                dsp += words+"\n"
-
-            self.dsp_text.configure(state="normal")
-            self.dsp_text.delete("1.0", "end-1c")
-            self.dsp_text.insert("1.0", dsp)
-            self.dsp_text.configure(state="disabled")
-
-            msh_audio = whisper.load_audio(msh_file_path)
-            msh_result = model.transcribe(msh_audio)
-
-            msh_result["text"] = msh_result["text"].split()
-            msh = ""
-            for words in msh_result["text"]:
-                msh += words + "\n"
-
-            self.msh_text.configure(state="normal")
-            self.msh_text.delete("1.0", "end-1c")
-            self.msh_text.insert("1.0", msh)
-            self.msh_text.configure(state="disabled")
-
-        except Exception as e:
-            showerror("Ошибка", f"Произошла ошибка при транскрибации: {str(e)}")
+        self.dsp_file_path = ""
+        self.msh_file_path = ""
 
     def startTranscribe(self):
-        self.update_frame(0)
-        self.transcribe()
-        showinfo("Выполнено", "Процесс транскрибации завершён \nНажмите Oк, чтобы продолжить")
+        global dsp_file_path
+        global msh_file_path
+
+        if dsp_file_path == "" and msh_file_path == "":
+            showwarning("Внимание", "Не выбраны файлы для транскрибации")
+        else:
+            try:
+                model = whisper.load_model("base")
+                dsp_audio = whisper.load_audio(dsp_file_path)
+                dsp_result = model.transcribe(dsp_audio)
+
+                dsp_result["text"] = dsp_result["text"].split()
+                dsp = ""
+                for words in dsp_result["text"]:
+                    dsp += words + "\n"
+
+                self.dsp_text.configure(state="normal")
+                self.dsp_text.delete("1.0", "end-1c")
+                self.dsp_text.insert("1.0", dsp)
+                self.dsp_text.configure(state="disabled")
+
+                msh_audio = whisper.load_audio(msh_file_path)
+                msh_result = model.transcribe(msh_audio)
+
+                msh_result["text"] = msh_result["text"].split()
+                msh = ""
+                for words in msh_result["text"]:
+                    msh += words + "\n"
+
+                self.msh_text.configure(state="normal")
+                self.msh_text.delete("1.0", "end-1c")
+                self.msh_text.insert("1.0", msh)
+                self.msh_text.configure(state="disabled")
+            except Exception:
+                showerror("Внимание", "Поддерживаются только .mp3 файлы")
 
     def clear(self):
         global dsp_file_path
