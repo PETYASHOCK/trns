@@ -2,10 +2,9 @@ import os.path
 import customtkinter as CTk
 from tkinter import filedialog
 import tkinter as tk
-from tkinter.messagebox import showerror, showwarning, showinfo
+from tkinter.messagebox import showwarning, showinfo
 import whisper
 from PIL import Image
-import threading
 
 
 class Application(CTk.CTk):
@@ -43,16 +42,16 @@ class Application(CTk.CTk):
                                           font=("Bold", 16), command=self.choose_file)
         self.findFile_btn.grid(row=1, column=0, padx=(50, 50), pady=(50, 10), ipadx=10)
 
-        self.thr1 = threading.Thread(target=self.startTranscribe)
+        # self.thr1 = threading.Thread(target=self.startTranscribe)
         self.startTr_btn = CTk.CTkButton(master=self.menu_frame,
-                                         text="Запуск", font=("Bold", 16), command=self.thr1.start)
+                                         text="Запуск", font=("Bold", 16), command=self.startTranscribe)
         self.startTr_btn.grid(row=1, column=1, padx=(50, 50), pady=(50, 10), ipadx=10)
 
         self.clear_btn = CTk.CTkButton(master=self.menu_frame, text="Очистить поля",
                                        font=("Bold", 16), command=self.clear)
         self.clear_btn.grid(row=2, column=0, padx=(50, 50), pady=(10, 15), ipadx=10)
 
-        self.saveTranscribe_btn = CTk.CTkButton(master=self.menu_frame, text="ИПС", font=("Bold", 16))
+        self.saveTranscribe_btn = CTk.CTkButton(master=self.menu_frame, text="Проверка ответа", font=("Bold", 16), command=self.predict)
         self.saveTranscribe_btn.grid(row=2, column=1, padx=(50, 50), pady=(10, 15), ipadx=10)
 
         self.path_frame = CTk.CTkFrame(master=self, fg_color="transparent")
@@ -101,14 +100,20 @@ class Application(CTk.CTk):
             showwarning("Внимание", "Не выбраны файлы для транскрибации")
         else:
             try:
-                model = whisper.load_model("base")
+                global dsp
+                global msh
+                global dsp_result
+                global msh_result
+                model = whisper.load_model("small")
                 dsp_audio = whisper.load_audio(dsp_file_path)
                 dsp_result = model.transcribe(dsp_audio)
 
                 dsp_result["text"] = dsp_result["text"].split()
                 dsp = ""
                 for words in dsp_result["text"]:
-                    dsp += words + "\n"
+                    dsp += words.lower() + "\n"
+
+                dsp = dsp.replace('.', '').replace(',', '').replace('-', '')
 
                 self.dsp_text.configure(state="normal")
                 self.dsp_text.delete("1.0", "end-1c")
@@ -120,15 +125,18 @@ class Application(CTk.CTk):
 
                 msh_result["text"] = msh_result["text"].split()
                 msh = ""
+
                 for words in msh_result["text"]:
-                    msh += words + "\n"
+                    msh += words.lower() + "\n"
+                msh = msh.replace('.', '').replace(',', '').replace('-', '')
 
                 self.msh_text.configure(state="normal")
                 self.msh_text.delete("1.0", "end-1c")
                 self.msh_text.insert("1.0", msh)
                 self.msh_text.configure(state="disabled")
-            except Exception:
-                showerror("Внимание", "Поддерживаются только .mp3 файлы")
+
+            except Exception as err:
+                print(err)
 
     def clear(self):
         global dsp_file_path
@@ -145,6 +153,78 @@ class Application(CTk.CTk):
 
         self.dsp_file_path_lbl.configure(text="Файл не выбран.")
         self.msh_file_path_lbl.configure(text="Файл не выбран.")
+
+
+    def predict(self):
+        global dsp
+        global msh
+
+        dictionary = [
+            "нулевой", "первый", "второй", "первого", "третьего", "второго",
+            "третий", "четвёртый", "пятый", "четвёртого", "пятого",
+            "шестой", "седьмой", "восьмой", "седьмого", "восьмого", "седьмого",
+            "девятый", "десятый", "одиннадцатый", "десятого", "одиннадцатого", "десятого",
+            "двенадцатый", "тринадцатый", "четырнадцатый", "тринадцатого", "четырнадцатого", "тринадцатого",
+            "пятнадцатый", "шестнадцатый", "семнадцатый", "шестнадцатого", "семнадцатого", "шестнадцатого",
+            "восемнадцатый", "девятнадцатый", "двадцатый", "девятнадцатого", "двадцатого", "девятнадцатого",
+            "двадцать первый", "двадцать второй", "двадцать третий", "двадцать второго", "двадцать третьего",
+            "двадцать второго", "двадцать четвёртый", "двадцать пятый", "двадцать шестой", "двадцать пятого",
+            "двадцать шестого", "двадцать пятого", "двадцать седьмой", "двадцать восьмой", "двадцать девятый",
+            "двадцать восьмого", "двадцать девятого", "двадцать восьмого", "тридцатый", "тридцать первый",
+            "тридцать второй", "тридцать первого", "тридцать второго", "тридцать первого", "тридцать третий",
+            "тридцать четвёртый", "тридцать пятый", "тридцать четвёртого", "тридцать пятого", "тридцать четвёртого",
+            "тридцать шестой", "тридцать седьмой", "тридцать восьмой", "тридцать седьмого", "тридцать восьмого",
+            "тридцать седьмого", "тридцать девятый", "сороковой", "сорок первый", "сорокового", "сорок первого",
+            "сорокового", "сорок второй", "сорок третий", "сорок четвёртый", "сорок третьего", "сорок четвёртого",
+            "сорок третьего", "сорок пятый", "сорок шестой", "сорок седьмой", "сорок шестого", "сорок седьмого",
+            "сорок шестого", "сорок восьмой", "сорок девятый", "пятидесятый", "сорок девятого", "пятидесятого",
+            "сорок девятого", "за", "с", "на", "м3", "m3" "м1", "m1", "м2", "m2", "м4", "m4", "м5", "m5", "м6", "m6",
+            "путь", "пути" "тупик", "свободный", "свободен", "занят", "занятый"
+        ]
+
+        dsprap = dsp.split()
+        mshrap = msh.split()
+
+        arr1 = []
+        arr2 = []
+
+        for word1 in dsprap:
+            for word2 in dictionary:
+                if word1 == word2:
+                    arr1.append(word1)
+                    continue
+
+        for word1 in mshrap:
+            for word2 in dictionary:
+                if word1 == word2:
+                    arr2.append(word1)
+                    continue
+
+        arr1 = "\n".join(arr1)
+        arr2 = "\n".join(arr2)
+        self.dsp_text.configure(state="normal")
+        self.dsp_text.delete("1.0", "end-1c")
+        self.dsp_text.insert("1.0", str(arr1))
+        self.dsp_text.configure(state="disabled")
+
+        self.msh_text.configure(state="normal")
+        self.msh_text.delete("1.0", "end-1c")
+        self.msh_text.insert("1.0", str(arr2))
+        self.msh_text.configure(state="disabled")
+
+        if (arr1 == arr2):
+            showinfo("Уведомление", "Реперные точки доклада совпадают")
+        else:
+            arr1 = arr1.split()
+            arr2 = arr2.split()
+
+            err = []
+            for i, j in zip(arr1, arr2):
+                if i != j:
+                    err.append(i)
+            errors = str(err)
+
+            showwarning("Внимание", "Несовпадения в строчках: "+errors)
 
 
 if __name__ == "__main__":
