@@ -1,48 +1,53 @@
 import os.path
 import customtkinter as CTk
 from tkinter import filedialog
-import tkinter as tk
+# import tkinter as tk
 from tkinter.messagebox import showwarning, showinfo
 import whisper
-from PIL import Image
+# from PIL import Image
 
 
 class Application(CTk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.geometry("540x530")
+        self.geometry("540x540")
         self.title("Транскрибатор")
         self.resizable(False, False)
-        self.text_frame = CTk.CTkFrame(master=self, fg_color="transparent")
+        self.configure(fg_color="#c3c2c0")
+        self.theme = CTk.set_default_color_theme("green")
+
+        self.text_frame = CTk.CTkFrame(master=self, fg_color="#d9d9d9")
         self.text_frame.grid(row=0, column=0, padx=(30, 30), pady=(20, 10))
 
-        self.dsp_lbl = CTk.CTkLabel(master=self.text_frame, text="ДСП", font=("Bold", 20))
+        self.dsp_lbl = CTk.CTkLabel(master=self.text_frame, text="ДСП", font=("Bold", 25), text_color="#686868")
         self.dsp_lbl.grid(row=0, column=0, pady=(5, 5))
 
-        self.msh_lbl = CTk.CTkLabel(master=self.text_frame, text="Машинист", font=("Bold", 20))
+        self.msh_lbl = CTk.CTkLabel(master=self.text_frame, text="Машинист", font=("Bold", 25), text_color="#686868")
         self.msh_lbl.grid(row=0, column=1, pady=(5, 5))
 
-        self.dsp_text = CTk.CTkTextbox(master=self.text_frame, border_width=2, border_color="gray")
+        self.dsp_text = CTk.CTkTextbox(master=self.text_frame, border_width=5, border_color="#c3c2c0",
+                                       fg_color="white", text_color="#686868")
         self.dsp_text.grid(row=1, column=0, padx=(20, 20), pady=(10, 10))
 
-        self.msh_text = CTk.CTkTextbox(master=self.text_frame, border_width=2, border_color="gray")
+        self.msh_text = CTk.CTkTextbox(master=self.text_frame, border_width=5, border_color="#c3c2c0",
+                                       fg_color="white", text_color="#686868")
         self.msh_text.grid(row=1, column=1, padx=(20, 20), pady=(10, 10))
 
         self.msh_text.configure(state="disable")
         self.dsp_text.configure(state="disable")
 
-        self.menu_frame = CTk.CTkFrame(master=self, fg_color="#2d2d2d", border_width=2, border_color="gray")
-        self.menu_frame.grid(row=2, column=0, padx=(10, 10))
+        self.menu_frame = CTk.CTkFrame(master=self, fg_color="#d9d9d9")
+        self.menu_frame.grid(row=2, column=0, padx=(10, 10), pady=(10, 0))
 
-        self.menu_lbl = CTk.CTkLabel(master=self.menu_frame, text="Панель управления", font=("Bold", 16))
-        self.menu_lbl.place(x=190, y=10)
+        self.menu_lbl = CTk.CTkLabel(master=self.menu_frame, text="Панель управления",
+                                     font=("Bold", 20), text_color="#686868")
+        self.menu_lbl.place(x=170, y=10)
 
         self.findFile_btn = CTk.CTkButton(master=self.menu_frame, text="Выбрать файлы",
                                           font=("Bold", 16), command=self.choose_file)
         self.findFile_btn.grid(row=1, column=0, padx=(50, 50), pady=(50, 10), ipadx=10)
 
-        # self.thr1 = threading.Thread(target=self.startTranscribe)
         self.startTr_btn = CTk.CTkButton(master=self.menu_frame,
                                          text="Запуск", font=("Bold", 16), command=self.startTranscribe)
         self.startTr_btn.grid(row=1, column=1, padx=(50, 50), pady=(50, 10), ipadx=10)
@@ -51,31 +56,36 @@ class Application(CTk.CTk):
                                        font=("Bold", 16), command=self.clear)
         self.clear_btn.grid(row=2, column=0, padx=(50, 50), pady=(10, 15), ipadx=10)
 
-        self.saveTranscribe_btn = CTk.CTkButton(master=self.menu_frame, text="Проверка ответа", font=("Bold", 16), command=self.predict)
+        self.saveTranscribe_btn = CTk.CTkButton(master=self.menu_frame, text="Проверка ответа",
+                                                font=("Bold", 16), command=self.predict)
         self.saveTranscribe_btn.grid(row=2, column=1, padx=(50, 50), pady=(10, 15), ipadx=10)
 
-        self.path_frame = CTk.CTkFrame(master=self, fg_color="transparent")
-        self.path_frame.grid(row=1, column=0, padx=(30, 30), pady=(0, 20))
+        self.paths_frame = CTk.CTkFrame(master=self.text_frame, fg_color="#d9d9d9", border_width=2, border_color="gray")
+        self.paths_frame.grid(row=2, column=0, padx=(0, 10), pady=(10, 10))
 
-        self.dsp_file_path_lbl = CTk.CTkLabel(master=self.path_frame, text="Файл не выбран.")
+        self.path_main_label = CTk.CTkLabel(master=self, text_color="#686868", text="Выбранные файлы",
+                                            bg_color="#d9d9d9")
+        self.path_main_label.place(x=215, y=270)
+
+        self.dsp_file_path_lbl = CTk.CTkLabel(master=self.paths_frame, text="Файл не выбран.", text_color="#686868")
         self.dsp_file_path_lbl.grid(row=2, column=0)
 
-        self.msh_file_path_lbl = CTk.CTkLabel(master=self.path_frame, text="Файл не выбран.")
+        self.msh_file_path_lbl = CTk.CTkLabel(master=self.paths_frame, text="Файл не выбран.", text_color="#686868")
         self.msh_file_path_lbl.grid(row=3, column=0)
 
-        self.label_loading = tk.Label(master=self.menu_frame, foreground="#2d2d2d", bg="#2d2d2d", borderwidth=0)
-        self.label_loading.place(x=285, y=70)
+        # self.label_loading = tk.Label(master=self.menu_frame, foreground="#2d2d2d", bg="#2d2d2d", borderwidth=0)
+        # self.label_loading.place(x=285, y=70)
 
-        self.update_frame(1)
+        # self.update_frame(1)
 
-    def update_frame(self, frame_num):
-        gif_path = "SVKl.gif"
-        gif = Image.open(gif_path)
-        num_frames = gif.n_frames
-        photo = tk.PhotoImage(format="gif -index {}".format(frame_num), file=gif_path)
-        self.label_loading.configure(image=photo)
-        self.label_loading.image = photo
-        self.after(20, self.update_frame, (frame_num + 1) % num_frames)
+    # def update_frame(self, frame_num):
+    #     gif_path = "SVKl.gif"
+    #     gif = Image.open(gif_path)
+    #     num_frames = gif.n_frames
+    #     photo = tk.PhotoImage(format="gif -index {}".format(frame_num), file=gif_path)
+    #     self.label_loading.configure(image=photo)
+    #     self.label_loading.image = photo
+    #     self.after(20, self.update_frame, (frame_num + 1) % num_frames)
 
     def choose_file(self):
         global dsp_file_path
